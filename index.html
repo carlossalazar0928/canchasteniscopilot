@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Reserva de Tenis - Club Asturiano</title>
+  <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700;900&display=swap" rel="stylesheet">
+
+  <style>
+    /* ==================== CONFIGURACIÓN VISUAL ==================== */
+    :root {
+      --primary: #235d3a;
+      --accent: #d2e603;
+      --white: #ffffff;
+      --logo-url: url('https://i.ibb.co/fzKg4fGZ/logo-2.jpg');
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0; padding: 0;
+      font-family: 'Lato', sans-serif;
+      background: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)),
+                  url('https://i.ibb.co/qFWNMRJw/20241127095946-pelota.jpg') center/cover no-repeat fixed;
+      min-height: 100vh;
+      display: flex; justify-content: center; align-items: center;
+      padding: 20px;
+    }
+
+    .container {
+      background: var(--white);
+      width: 90%;
+      max-width: 420px;
+      padding: 70px 30px 35px 30px;
+      border-radius: 15px;
+      box-shadow: 0 25px 50px rgba(0,0,0,0.5);
+      position: relative;
+      transition: max-width 0.5s ease-in-out;
+    }
+
+    .container::before {
+      content: '';
+      position: absolute; top: -55px; left: 50%;
+      transform: translateX(-50%);
+      width: 110px; height: 110px;
+      background: var(--white) var(--logo-url) center/cover no-repeat;
+      border-radius: 50%;
+      box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+      border: 5px solid var(--white);
+      z-index: 10;
+    }
+
+    .container.admin-mode {
+      max-width: 1000px !important;
+    }
+
+    h1, h2 {
+      color: var(--primary);
+      text-align: center;
+      margin-top: 10px;
+      font-weight: 900;
+      font-size: 1.4rem;
+    }
+
+    p { color: #555; text-align: center; font-size: 0.9rem; margin-bottom: 20px; }
+
+    label {
+      display: block;
+      font-weight: 700;
+      font-size: 0.8rem;
+      color: var(--primary);
+      text-transform: uppercase;
+      margin-top: 15px;
+      margin-bottom: 5px;
+    }
+
+    input, select {
+      width: 100%; padding: 12px;
+      border: 1px solid #ddd; border-radius: 8px;
+      background: #f9f9f9; font-size: 1rem;
+      box-sizing: border-box; transition: 0.3s;
+    }
+
+    button {
+      width: 100%; padding: 15px; margin-top: 25px;
+      background: var(--primary); color: white;
+      border: none; border-radius: 8px;
+      font-weight: 700; text-transform: uppercase;
+      cursor: pointer; letter-spacing: 1px; transition: 0.3s;
+    }
+
+    button:hover { background: #1a452b; transform: translateY(-2px); }
+
+    /* CARGADOR */
+    #loading {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(255, 255, 255, 0.85);
+      backdrop-filter: blur(5px);
+      z-index: 99999;
+      display: flex; justify-content: center; align-items: center;
+      visibility: hidden; opacity: 0; transition: opacity 0.2s, visibility 0.2s;
+    }
+
+    #loading.visible { visibility: visible; opacity: 1; }
+
+    .loader-content { text-align: center; }
+    .loader-content img { width: 120px; height: auto; margin-bottom: 15px; }
+
+    .hidden { display: none !important; }
+
+    /* ADMIN UI */
+    .admin-access-container {
+      margin-top: 30px; padding-top: 15px;
+      border-top: 1px dotted #ccc;
+      display: flex; justify-content: center;
+    }
+
+    .btn-admin {
+      background: none !important; color: #999 !important;
+      border: none !important; padding: 5px !important;
+      font-size: 0.75rem !important; cursor: pointer;
+      width: auto !important; margin: 0 !important;
+    }
+
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 0.85rem; }
+    th { background: var(--primary); color: white; padding: 10px; text-align: left; }
+    td { border-bottom: 1px solid #eee; padding: 10px; vertical-align: middle; }
+
+    .status-pagado { color: green; font-weight: 700; }
+    .status-pendiente { color: #b36b00; font-weight: 700; }
+
+    .no-disponible { border-color: #ffcccc; }
+
+    #precio-total {
+      background: var(--accent); color: var(--primary); padding: 10px; text-align: center;
+      font-weight: 900; margin-top: 15px; border-radius: 8px;
+    }
+
+    /* Responsive */
+    @media (min-width: 900px) {
+      body { padding: 40px; }
+    }
+  </style>
+</head>
+
+<body>
+  <div id="loading" aria-hidden="true">
+    <div class="loader-content" role="status" aria-live="polite">
+      <img src="https://media.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3enpiZ2Z2Nzl6cHdmNWgxOHI0d3F5c2xwcDloaTgzbDVneDFubGZldiZlcD12MV9naWZzX3JlbGF0ZWQmY3Q9Zw/WouU7wwav5MqzzmmtQ/giphy.gif" alt="Cargando...">
+      <p style="color: var(--primary); font-weight: 900;">PROCESANDO...</p>
+    </div>
+  </div>
+
+  <div class="container" role="main">
+    <div id="view-login">
+      <h1>Club Asturiano</h1>
+      <p>Reserva de Canchas de Tenis</p>
+
+      <label for="login-socio">Número de Socio</label>
+      <input type="number" id="login-socio" placeholder="Ej: 1234" />
+
+      <label for="login-fecha">Fecha de Nacimiento</label>
+      <input type="text" id="login-fecha" placeholder="DD/MM/AAAA" maxlength="10" />
+      <small style="color:#888;">Formato automático al escribir.</small>
+
+      <button id="btn-login">Ingresar al Sistema</button>
+
+      <div class="admin-access-container">
+        <button id="btn-admin" class="btn-admin">🔒 Acceso Administración</button>
+      </div>
+    </div>
+
+    <div id="view-booking" class="hidden">
+      <h2 id="welcome-msg">Hola Socio</h2>
+
+      <label for="reserva-fecha">Fecha de Reserva</label>
+      <input type="date" id="reserva-fecha" onchange="validarLunes(this); cargarConfiguracionDia();" onkeydown="return false" />
+
+      <div id="config-area" class="hidden">
+        <div style="display:flex; gap:10px;">
+          <div style="flex:1;">
+            <label for="reserva-hora">Hora Inicio</label>
+            <select id="reserva-hora" onchange="calcularPrecio(); cargarCanchas();"></select>
+          </div>
+          <div style="flex:1;">
+            <label for="reserva-duracion">Duración</label>
+            <select id="reserva-duracion" onchange="cargarCanchas(); calcularPrecio();">
+              <option value="1">1 Hora</option>
+              <option value="2">2 Horas</option>
+            </select>
+          </div>
+        </div>
+
+        <label for="reserva-tipo">Tipo de Juego</label>
+        <select id="reserva-tipo" onchange="generarCamposJugadores(); calcularPrecio();">
+          <option value="single">Single (2 Personas)</option>
+          <option value="doble">Dobles (4 Personas)</option>
+        </select>
+
+        <label for="reserva-cancha">Seleccionar Cancha</label>
+        <select id="reserva-cancha">
+          <option value="">-- Primero seleccione hora --</option>
+        </select>
+
+        <div id="jugadores-container" style="margin-top:15px; border:1px solid #eee; padding:10px; border-radius:8px;"></div>
+
+        <div id="precio-total" aria-live="polite">Total a Pagar: $0</div>
+
+        <button id="btn-confirm">Confirmar Reserva</button>
+      </div>
+    </div>
+
+    <div id="view-success" class="hidden">
+      <h2 style="color:green;">¡Reserva Exitosa!</h2>
+      <div id="resumen-final" style="background:#f0f9f0; padding:15px; border-radius:8px; border:1px solid green; font-size:0.9rem;"></div>
+      <button id="btn-new">Hacer otra reserva</button>
+    </div>
+
+    <div id="view-admin" class="hidden">
+      <h2>Panel de Control - Administración</h2>
+
+      <div style="background: #f4f4f4; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #ddd;">
+        <h3 style="margin-top:0; font-size: 1rem; color: var(--primary);">➕ Bloquear Turno / Reserva Manual</h3>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+          <input type="date" id="admin-reserva-fecha" />
+          <select id="admin-reserva-hora"></select>
+          <select id="admin-reserva-cancha">
+            <option value="1">Cancha 1</option>
+            <option value="2">Cancha 2</option>
+            <option value="3">Cancha 3</option>
+            <option value="4">Cancha 4</option>
+            <option value="5">Cancha 5</option>
+            <option value="6">Cancha 6</option>
+          </select>
+          <select id="admin-usuario-creador">
+            <option value="">¿Quién reserva?</option>
+            <option value="Perso 1">Perso 1</option>
+            <option value="Perso 2">Perso 2</option>
+            <option value="Perso 3">Perso 3</option>
+            <option value="Perso 4">Perso 4</option>
+            <option value="Franquero">Franquero</option>
+          </select>
+        </div>
+        <button id="btn-bloquear" style="margin-top:10px; padding: 10px; background: #444;">Bloquear Horario</button>
+      </div>
+
+      <div id="admin-content" style="overflow-x:auto;">
+        <table id="admin-table">
+          <thead>
+            <tr>
+              <th>Fecha/Hora</th>
+              <th>Cancha</th>
+              <th>Socio</th>
+              <th>Estado</th>
+              <th>Cobrador</th>
+              <th>Acción</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <button id="btn-close-admin" style="background:#666;">Cerrar Panel</button>
+    </div>
+  </div>
+
+  <script>
+    /* ==================== CONFIG / UTIL ==================== */
+    const API_URL = "https://script.google.com/macros/s/AKfycbxaAz1Z1PKwIyiyDV_WCT1qhHC_ALdsgpqH0U0Xf1oeWFHYHISjK5unJtyCtSYISMu7/exec";
+
+    // Loader control con contador
+    let _pendingRequests = 0;
+    function showLoader() {
+      _pendingRequests++;
+      const loader = document.getElementById('loading');
+      loader.classList.add('visible');
+      loader.setAttribute('aria-hidden', 'false');
+    }
+    function hideLoader() {
+      _pendingRequests = Math.max(0, _pendingRequests - 1);
+      if (_pendingRequests === 0) {
+        const loader = document.getElementById('loading');
+        loader.classList.remove('visible');
+        loader.setAttribute('aria-hidden', 'true');
+      }
+    }
+
+    async function llamarAPI(accion, datos = {}) {
+      showLoader();
+      try {
+        const response = await fetch(API_URL, {
+          method: "POST",
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: accion, ...datos })
+        });
+
+        if (!response.ok) {
+          const text = await response.text().catch(() => '');
+          throw new Error(`HTTP ${response.status} ${text}`);
+        }
+
+        const resultado = await response.json().catch(() => { throw new Error('JSON inválido'); });
+        return resultado;
+      } catch (error) {
+        console.error('API error:', error);
+        return null;
+      } finally {
+        hideLoader();
+      }
+    }
+
+    function escapeHtml(str) {
+      if (str === null || str === undefined) return '';
+      const div = document.createElement('div');
+      div.textContent = String(str);
+      return div.innerHTML;
+    }
+
+    function hoyLocalYYYYMMDD() {
+      const d = new Date();
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      return `${yyyy}-${mm}-${dd}`;
+    }
+
+    // Validación simple de fecha ISO (YYYY-MM-DD)
+    function isValidISODate(val) {
+      if (!val) return false;
+      const d = new Date(val + 'T00:00:00');
+      return !isNaN(d.getTime());
+    }
+
+    /* ==================== ESTADO GLOBAL ==================== */
+    let usuarioActual = null;
+    let ultimaCargaCanchasId = 0;
+
+    /* ==================== EVENTOS INICIALES ==================== */
+    document.getElementById('btn-login').addEventListener('click', validarUsuario);
+    document.getElementById('btn-confirm').addEventListener('click', enviarReserva);
+    document.getElementById('btn-new').addEventListener('click', () => location.reload());
+    document.getElementById('btn-admin').addEventListener('click', showAdminLogin);
+    document.getElementById('btn-close-admin').addEventListener('click', () => location.reload());
+    document.getElementById('btn-bloquear').addEventListener('click', reservaManualAdmin);
+
+    // Máscara de fecha de nacimiento (login-fecha)
+    (function setupFechaMascara() {
+      const inputFecha = document.getElementById('login-fecha');
+      inputFecha.addEventListener('keyup', function(e) {
+        if (e.key === 'Backspace' || e.key === 'Delete') return;
+        let v = this.value.replace(/[^\d]/g, '');
+        if (v.length >= 3 && v.length <= 4) v = v.slice(0,2) + '/' + v.slice(2);
+        if (v.length >= 5 && v.length <= 8) v = v.slice(0,2) + '/' + v.slice(2,4) + '/' + v.slice(4,8);
+        this.value = v;
+      });
+    })();
+
+    /* ==================== LOGIN Y HORAS ==================== */
+    async function validarUsuario() {
+      const socio = document.getElementById('login-socio').value.trim();
+      const fecha = document.getElementById('login-fecha').value.trim();
+      if (!socio || !fecha) return alert("Complete los datos");
+
+      // Nota: aquí se envía la fecha tal como la ingresó el usuario; el backend debe validar formato.
+      const res = await llamarAPI('validarSocio', { socio, fecha });
+      if (res && res.success) {
+        usuarioActual = { id: socio, nombre: res.nombre || 'Socio' };
+        document.getElementById('view-login').classList.add('hidden');
+        document.getElementById('view-booking').classList.remove('hidden');
+        document.getElementById('welcome-msg').innerText = "Hola, " + escapeHtml(usuarioActual.nombre);
+        inicializarHoras();
+
+        // Establecer min de reserva con fecha local
+        document.getElementById('reserva-fecha').setAttribute('min', hoyLocalYYYYMMDD());
+      } else {
+        alert("Datos incorrectos");
+      }
+    }
+
+    function inicializarHoras() {
+      const select = document.getElementById('reserva-hora');
+      select.innerHTML = '';
+      const optDefault = document.createElement('option');
+      optDefault.value = '';
+      optDefault.textContent = '-- Seleccione Hora --';
+      select.appendChild(optDefault);
+
+      for (let i = 7; i <= 20; i++) {
+        const opt = document.createElement('option');
+        opt.value = String(i);
+        opt.textContent = `${i}:00 hs`;
+        select.appendChild(opt);
+      }
+
+      generarCamposJugadores();
+    }
+
+    function cargarConfiguracionDia() {
+      const fecha = document.getElementById('reserva-fecha').value;
+      if (!fecha || !isValidISODate(fecha)) return;
+      document.getElementById('config-area').classList.remove('hidden');
+      cargarCanchas();
+    }
+
+    /* ==================== GENERAR JUGADORES ==================== */
+    function generarCamposJugadores() {
+      const tipo = document.getElementById('reserva-tipo').value;
+      const container = document.getElementById('jugadores-container');
+      container.innerHTML = '';
+      const title = document.createElement('p');
+      title.innerHTML = '<b>Jugadores:</b>';
+      container.appendChild(title);
+
+      const cantidad = (tipo === 'single') ? 2 : 4;
+      const fragment = document.createDocumentFragment();
+
+      // Empezamos en 2 porque el titular es el usuario actual
+      for (let i = 2; i <= cantidad; i++) {
+        const row = document.createElement('div');
+        row.style.display = 'flex';
+        row.style.gap = '5px';
+        row.style.marginBottom = '5px';
+
+        const sel = document.createElement('select');
+        sel.className = 'tipo-jugador';
+        sel.style.width = '40%';
+        sel.addEventListener('change', calcularPrecio);
+        const o1 = document.createElement('option'); o1.value = 'socio'; o1.textContent = 'Socio';
+        const o2 = document.createElement('option'); o2.value = 'nosocio'; o2.textContent = 'No Socio';
+        sel.appendChild(o1); sel.appendChild(o2);
+
+        const inp = document.createElement('input');
+        inp.type = 'text';
+        inp.className = 'dato-jugador';
+        inp.placeholder = 'Nombre/Socio';
+        inp.style.width = '60%';
+        inp.addEventListener('input', () => {}); // placeholder for future validation
+
+        row.appendChild(sel);
+        row.appendChild(inp);
+        fragment.appendChild(row);
+      }
+
+      container.appendChild(fragment);
+    }
+
+    /* ==================== CALCULO DE PRECIO ==================== */
+    function calcularPrecio() {
+      const horaVal = document.getElementById('reserva-hora').value;
+      const duracionVal = document.getElementById('reserva-duracion').value;
+
+      const hora = parseInt(horaVal, 10);
+      const duracion = parseInt(duracionVal, 10);
+
+      if (isNaN(hora) || isNaN(duracion)) {
+        document.getElementById('precio-total').textContent = "Total a Pagar: $0";
+        return 0;
+      }
+
+      const tSocio = (hora < 18) ? 1000 : 1500;
+      const tNoSocio = (hora < 18) ? 2000 : 2500;
+
+      // El titular siempre cuenta como socio
+      let total = tSocio * duracion;
+
+      document.querySelectorAll('.tipo-jugador').forEach(s => {
+        const tipo = s.value;
+        total += (tipo === 'socio' ? tSocio : tNoSocio) * duracion;
+      });
+
+      document.getElementById('precio-total').textContent = "Total a Pagar: $" + total;
+      return total;
+    }
+
+    /* ==================== CARGA DE CANCHAS (con requestId) ==================== */
+    async function cargarCanchas() {
+      const fecha = document.getElementById('reserva-fecha').value;
+      const selectHora = document.getElementById('reserva-hora');
+      const selectCanchas = document.getElementById('reserva-cancha');
+
+      if (!fecha || !isValidISODate(fecha)) {
+        selectCanchas.innerHTML = '<option value="">-- Primero seleccione fecha --</option>';
+        return;
+      }
+      if (!selectHora || selectHora.value === "") {
+        selectCanchas.innerHTML = '<option value="">-- Primero seleccione hora --</option>';
+        return;
+      }
+
+      const peticionId = ++ultimaCargaCanchasId;
+      selectCanchas.innerHTML = '<option value="">-- Verificando... --</option>';
+      selectCanchas.setAttribute('aria-busy', 'true');
+
+      const horaInicio = parseInt(selectHora.value, 10);
+      const duracionReserva = parseInt(document.getElementById('reserva-duracion').value, 10);
+      const horaFin = horaInicio + duracionReserva;
+
+      try {
+        const ocupadas = await llamarAPI('obtenerDisponibilidad', { fechaStr: fecha });
+
+        // Si otra petición más reciente fue lanzada, ignoramos esta respuesta
+        if (peticionId !== ultimaCargaCanchasId) return;
+
+        if (!Array.isArray(ocupadas)) {
+          throw new Error('Respuesta inválida de disponibilidad');
+        }
+
+        const dia = new Date(fecha + 'T00:00:00').getDay();
+        const limiteCanchas = (dia === 0 || dia === 6) ? 6 : 2;
+
+        let opcionesEncontradas = 0;
+        const fragment = document.createDocumentFragment();
+        const optDefault = document.createElement('option');
+        optDefault.value = '';
+        optDefault.textContent = '-- Seleccione Cancha --';
+        fragment.appendChild(optDefault);
+
+        for (let i = 1; i <= limiteCanchas; i++) {
+          const estaOcupada = ocupadas.some(r => {
+            const rCancha = parseInt(r.cancha, 10);
+            if (isNaN(rCancha) || rCancha !== i) return false;
+            const rHora = parseInt(r.hora, 10);
+            const rDur = parseInt(r.duracion || 1, 10);
+            const rHoraFin = rHora + rDur;
+            return (horaInicio < rHoraFin && horaFin > rHora);
+          });
+
+          if (!estaOcupada) {
+            const opt = document.createElement('option');
+            opt.value = String(i);
+            opt.textContent = `Cancha ${i}`;
+            fragment.appendChild(opt);
+            opcionesEncontradas++;
+          }
+        }
+
+        selectCanchas.innerHTML = '';
+        selectCanchas.appendChild(fragment);
+
+        if (opcionesEncontradas === 0) {
+          alert("⚠️ No hay canchas disponibles para este horario/duración. Por favor, elija otra hora.");
+          selectCanchas.innerHTML = "<option value=''>❌ Sin disponibilidad</option>";
+          selectCanchas.classList.add('no-disponible');
+        } else {
+          selectCanchas.classList.remove('no-disponible');
+        }
+      } catch (err) {
+        console.error('Error al obtener disponibilidad:', err);
+        selectCanchas.innerHTML = '<option value="">-- Error al verificar disponibilidad --</option>';
+      } finally {
+        selectCanchas.removeAttribute('aria-busy');
+      }
+    }
+
+    /* ==================== ENVIO DE RESERVA ==================== */
+    async function enviarReserva() {
+      const cancha = document.getElementById('reserva-cancha').value;
+      if (!cancha) return alert("Seleccione cancha");
+      const fecha = document.getElementById('reserva-fecha').value;
+      const hora = document.getElementById('reserva-hora').value;
+      const duracion = document.getElementById('reserva-duracion').value;
+
+      if (!fecha || !hora || !duracion) return alert("Complete fecha, hora y duración");
+
+      const total = calcularPrecio();
+
+      if (!usuarioActual || !usuarioActual.id) return alert("Usuario no válido");
+
+      let detalleJugadores = `${usuarioActual.nombre} (Titular)`;
+      document.querySelectorAll('.dato-jugador').forEach(inp => {
+        const val = inp.value.trim();
+        if (val) detalleJugadores += `, ${val}`;
+      });
+
+      const datos = {
+        fecha, hora, duracion, cancha,
+        socioTitular: usuarioActual.id,
+        detalleJugadores,
+        total
+      };
+
+      const res = await llamarAPI('guardarReserva', { datos });
+
+      if (res && res.success) {
+        document.getElementById('view-booking').classList.add('hidden');
+        document.getElementById('view-success').classList.remove('hidden');
+
+        const texto = `Reserva: ${usuarioActual.nombre} - Cancha ${cancha} - Total $${total}`;
+        const urlWA = `https://wa.me/5491130351121?text=${encodeURIComponent(texto)}`;
+
+        const resumen = document.getElementById('resumen-final');
+        resumen.innerHTML = ''; // limpiar
+        const detalle = document.createElement('div');
+        detalle.innerHTML = `Detalle: Cancha ${escapeHtml(cancha)}, ${escapeHtml(hora)}:00hs.`;
+        resumen.appendChild(detalle);
+
+        const a = document.createElement('a');
+        a.href = urlWA;
+        a.target = '_blank';
+        a.rel = 'noopener noreferrer';
+        a.style.display = 'block';
+        a.style.background = '#25d366';
+        a.style.color = 'white';
+        a.style.padding = '10px';
+        a.style.textAlign = 'center';
+        a.style.textDecoration = 'none';
+        a.style.borderRadius = '5px';
+        a.textContent = 'ENVIAR WHATSAPP';
+        resumen.appendChild(document.createElement('br'));
+        resumen.appendChild(a);
+      } else {
+        alert('No se pudo guardar la reserva. Intente nuevamente.');
+      }
+    }
+
+    /* ==================== ADMIN ==================== */
+    // Nota: el uso de prompt para contraseña es inseguro en producción.
+    function showAdminLogin() {
+      setTimeout(() => {
+        const pass = prompt("🔐 Ingrese la clave de administración:");
+        if (pass === null) return;
+        // En producción, validar en servidor. Aquí se mantiene por simplicidad.
+        if (pass === "admin123") {
+          document.getElementById('view-login').classList.add('hidden');
+          document.getElementById('view-booking').classList.add('hidden');
+          document.getElementById('view-success').classList.add('hidden');
+
+          document.querySelector('.container').classList.add('admin-mode');
+          document.getElementById('view-admin').classList.remove('hidden');
+
+          // Inicializar select de horas admin
+          const adminHora = document.getElementById('admin-reserva-hora');
+          adminHora.innerHTML = '';
+          for (let i = 7; i <= 21; i++) {
+            const opt = document.createElement('option');
+            opt.value = String(i);
+            opt.textContent = `${i}:00 hs`;
+            adminHora.appendChild(opt);
+          }
+
+          // min fecha admin
+          document.getElementById('admin-reserva-fecha').setAttribute('min', hoyLocalYYYYMMDD());
+
+          cargarAdmin();
+        } else {
+          alert("❌ Contraseña incorrecta");
+        }
+      }, 100);
+    }
+
+    async function cargarAdmin() {
+      const res = await llamarAPI('obtenerReservasAdmin');
+      const tbody = document.querySelector('#admin-table tbody');
+      tbody.innerHTML = '';
+
+      if (!res || (Array.isArray(res) && res.length === 0)) {
+        const tr = document.createElement('tr');
+        const td = document.createElement('td');
+        td.colSpan = 6;
+        td.style.textAlign = 'center';
+        td.textContent = 'No hay reservas registradas';
+        tr.appendChild(td);
+        tbody.appendChild(tr);
+        return;
+      }
+
+      // Si la API devuelve arrays con índices, conviértelos a objetos en el backend.
+      // Aquí asumimos que res es un array de objetos con propiedades nombradas cuando sea posible.
+      res.forEach((r, i) => {
+        // Soporte flexible: si r es array, mapear índices comunes
+        const item = (Array.isArray(r)) ? {
+          fecha: r[1] || '',
+          hora: r[2] || '',
+          cancha: r[4] || '',
+          socio: r[6] || '',
+          estado: r[9] || 'Pendiente',
+          cobrador: r[10] || '-'
+        } : {
+          fecha: r.fecha || r.fechaReserva || '',
+          hora: r.hora || '',
+          cancha: r.cancha || '',
+          socio: r.socio || r.nombre || '',
+          estado: r.estado || 'Pendiente',
+          cobrador: r.cobrador || '-'
+        };
+
+        const tr = document.createElement('tr');
+
+        const tdFecha = document.createElement('td');
+        tdFecha.innerHTML = `${escapeHtml(item.fecha)} <br> ${escapeHtml(String(item.hora))}hs`;
+        tr.appendChild(tdFecha);
+
+        const tdCancha = document.createElement('td');
+        tdCancha.textContent = `Cancha ${escapeHtml(String(item.cancha))}`;
+        tr.appendChild(tdCancha);
+
+        const tdSocio = document.createElement('td');
+        tdSocio.textContent = escapeHtml(item.socio);
+        tr.appendChild(tdSocio);
+
+        const tdEstado = document.createElement('td');
+        tdEstado.className = (item.estado === 'Abonada') ? 'status-pagado' : 'status-pendiente';
+        tdEstado.textContent = escapeHtml(item.estado);
+        tr.appendChild(tdEstado);
+
+        const tdCobrador = document.createElement('td');
+        tdCobrador.textContent = escapeHtml(item.cobrador);
+        tr.appendChild(tdCobrador);
+
+        const tdAccion = document.createElement('td');
+        if (item.estado !== 'Abonada') {
+          const sel = document.createElement('select');
+          sel.style.fontSize = '0.7rem';
+          sel.style.padding = '2px';
+          const opt0 = document.createElement('option'); opt0.value = ''; opt0.textContent = 'Cobrar...';
+          const opt1 = document.createElement('option'); opt1.value = 'Perso 1'; opt1.textContent = 'Perso 1';
+          const opt2 = document.createElement('option'); opt2.value = 'Perso 2'; opt2.textContent = 'Perso 2';
+          const opt3 = document.createElement('option'); opt3.value = 'Perso 3'; opt3.textContent = 'Perso 3';
+          const opt4 = document.createElement('option'); opt4.value = 'Perso 4'; opt4.textContent = 'Perso 4';
+          const opt5 = document.createElement('option'); opt5.value = 'Franquero'; opt5.textContent = 'Franquero';
+          sel.append(opt0, opt1, opt2, opt3, opt4, opt5);
+          sel.addEventListener('change', () => cobrarReserva(i, sel.value));
+          tdAccion.appendChild(sel);
+        } else {
+          tdAccion.textContent = '✅';
+        }
+        tr.appendChild(tdAccion);
+
+        tbody.appendChild(tr);
+      });
+    }
+
+    async function cobrarReserva(index, cobrador) {
+      if (!cobrador) return;
+      if (!confirm(`¿Confirmar cobro por ${cobrador}?`)) return;
+      const res = await llamarAPI('actualizarPago', { index: index, cobrador: cobrador });
+      if (res && res.success) cargarAdmin();
+      else alert('No se pudo actualizar el pago');
+    }
+
+    async function reservaManualAdmin() {
+      const fecha = document.getElementById('admin-reserva-fecha').value;
+      const hora = document.getElementById('admin-reserva-hora').value;
+      const cancha = document.getElementById('admin-reserva-cancha').value;
+      const creador = document.getElementById('admin-usuario-creador').value;
+
+      if (!fecha || !creador) return alert("Complete fecha y quién realiza la reserva");
+
+      const datos = {
+        fecha: fecha,
+        hora: hora,
+        duracion: 1,
+        cancha: cancha,
+        socioTitular: "ADMIN-" + creador,
+        total: 0,
+        estado: "Abonada",
+        cobrador: creador
+      };
+
+      const res = await llamarAPI('guardarReserva', { datos });
+      if (res && res.success) {
+        alert("Horario bloqueado con éxito");
+        cargarAdmin();
+      } else {
+        alert("No se pudo bloquear el horario");
+      }
+    }
+  </script>
+</body>
+</html>
