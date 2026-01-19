@@ -284,29 +284,40 @@
       }
     }
 
-    async function llamarAPI(accion, datos = {}) {
-      showLoader();
-      try {
-        const response = await fetch(API_URL, {
-          method: "POST",
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: accion, ...datos })
-        });
+   // llamarAPI (con logs para depuración)
+async function llamarAPI(accion, datos = {}) {
+  showLoader && showLoader(); // si usas el loader del proyecto
+  try {
+    const payload = { action: accion, ...datos };
+    console.log('API -> Enviando payload:', payload); // ver en consola qué se envía
 
-        if (!response.ok) {
-          const text = await response.text().catch(() => '');
-          throw new Error(`HTTP ${response.status} ${text}`);
-        }
+    const response = await fetch(API_URL, {
+      method: "POST",
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
 
-        const resultado = await response.json().catch(() => { throw new Error('JSON inválido'); });
-        return resultado;
-      } catch (error) {
-        console.error('API error:', error);
-        return null;
-      } finally {
-        hideLoader();
-      }
+    console.log('API -> HTTP status:', response.status);
+    const text = await response.text();
+    console.log('API -> body raw:', text);
+
+    let resultado;
+    try {
+      resultado = JSON.parse(text);
+    } catch (e) {
+      console.error('API -> Error parseando JSON:', e);
+      return { error: 'JSON inválido', raw: text };
     }
+    return resultado;
+  } catch (error) {
+    console.error('API error:', error);
+    return null;
+  } finally {
+    hideLoader && hideLoader(); // si usas el loader del proyecto
+  }
+}
+
+
 
     function escapeHtml(str) {
       if (str === null || str === undefined) return '';
@@ -355,26 +366,41 @@
     })();
 
     /* ==================== LOGIN Y HORAS ==================== */
-    async function validarUsuario() {
-      const socio = document.getElementById('login-socio').value.trim();
-      const fecha = document.getElementById('login-fecha').value.trim();
-      if (!socio || !fecha) return alert("Complete los datos");
+    / validarUsuario que envía la fecha EXACTA en DD/MM/YYYY
+async function validarUsuario() {
+  const socio = String(document.getElementById('login-socio').value || '').trim();
+  const fechaRaw = String(document.getElementById('login-fecha').value || '').trim();
 
-      // Nota: aquí se envía la fecha tal como la ingresó el usuario; el backend debe validar formato.
-      const res = await llamarAPI('validarSocio', { socio, fecha });
-      if (res && res.success) {
-        usuarioActual = { id: socio, nombre: res.nombre || 'Socio' };
-        document.getElementById('view-login').classList.add('hidden');
-        document.getElementById('view-booking').classList.remove('hidden');
-        document.getElementById('welcome-msg').innerText = "Hola, " + escapeHtml(usuarioActual.nombre);
-        inicializarHoras();
+  // Validación local mínima: formato DD/MM/YYYY
+  const re = /^(\d{2})\/(\d{2})\/(\d{4})$/;
+  if (!socio || !fechaRaw) {
+    return alert("Complete los datos");
+  }
+  if (!re.test(fechaRaw)) {
+    return alert("Formato de fecha inválido. Use DD/MM/YYYY");
+  }
 
-        // Establecer min de reserva con fecha local
-        document.getElementById('reserva-fecha').setAttribute('min', hoyLocalYYYYMMDD());
-      } else {
-        alert("Datos incorrectos");
-      }
-    }
+  // Normalizar espacios en socio (no modificar la fecha)
+  const socioNormalizado = socio.replace(/\s+/g, '');
+
+  // Enviar exactamente la cadena DD/MM/YYYY al backend
+  const res = await llamarAPI('validarSocio', { socio: socioNormalizado, fecha: fechaRaw });
+
+  console.log('validarUsuario -> respuesta API:', res);
+
+  if (res && (res.success === true || res.ok === true)) {
+    usuarioActual = { id: socioNormalizado, nombre: res.nombre || 'Socio' };
+    document.getElementById('view-login').classList.add('hidden');
+    document.getElementById('view-booking').classList.remove('hidden');
+    document.getElementById('welcome-msg').innerText = "Hola, " + (res.nombre || 'Socio');
+    inicializarHoras();
+    // establecer min de reserva en formato local YYYY-MM-DD (no afecta la fecha de nacimiento)
+    document.getElementById('reserva-fecha').setAttribute('min', hoyLocalYYYYMMDD && hoyLocalYYYYMMDD());
+  } else {
+    const motivo = res && (res.message || res.error) ? `: ${res.message || res.error}` : '';
+    alert("Datos incorrectos" + motivo);
+  }
+}
 
     function inicializarHoras() {
       const select = document.getElementById('reserva-hora');
